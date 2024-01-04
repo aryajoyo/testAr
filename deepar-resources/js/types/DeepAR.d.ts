@@ -1,7 +1,17 @@
+/// <reference types="dom-mediacapture-transform" />
 import { ARTouchInfo } from "./touchType";
 import { DeepARCallbacks } from "./callbacks";
 import { DeepARParams } from "./initParams";
 import { LogType } from "./logType";
+import { ScriptingAPI } from "./scriptingApi";
+import type * as xzimg from "./dynamicModules/xzimg/index";
+import type * as mediaPipe from "./dynamicModules/mediaPipe/index";
+declare global {
+    interface Window {
+        __deeparDynamicJsModule_xzimg__: typeof xzimg;
+        __deeparDynamicJsModule_mediaPipe__: typeof mediaPipe;
+    }
+}
 /**
  * Initialize the DeepAR SDK.<br><br>
  * @param params Initialization parameters.
@@ -23,6 +33,7 @@ export declare class DeepAR {
      * @private
      */
     private module;
+    private canvasTouchHelper;
     /**
      * Callbacks property is used to add/remove/change callbacks called by the DeepAR SDK. See list of all callbacks at {@link DeepARCallbacks}. <br><br>
      * Example: To add/change certain callback:
@@ -39,6 +50,13 @@ export declare class DeepAR {
      * ```
      */
     callbacks: DeepARCallbacks;
+    /**
+     * Scripting API property used to access all the scripting interop methods.
+     *
+     * @example
+     * let scriptingVariable = deepAR.ScriptingAPI.getStringVar('variableName');
+     */
+    ScriptingAPI: ScriptingAPI;
     /**
      * @internal
      * @param module
@@ -93,18 +111,51 @@ export declare class DeepAR {
      */
     takeScreenshot(): Promise<string>;
     /**
-     * Starts video recording of the canvas.
+     * Start video recording of the DeepAR preview.
+     *
+     * To stop video recording call {@link finishVideoRecording}.
+     * By default, the audio is not recorded. To record audio set the recordAudio parameter. Note that if the user did not give the microphone permission, the recording will not start until the permission is granted. If permission is denied, the function will throw.
+     * The recorded video will be mp4 on all browsers except Firefox where it will be webm.
+     * Audio recording is currently not available on Android.
+     *
      * @param options Parameters that specify the format of recorded videos
-     * @param options.mimeType A MIME type specifying the format for the resulting video, such as `video/webm` or `video/mp4`. Corresponds to the MIME type used by <a href="https://developer.mozilla.org/en-US/docs/Web/API/Blob">Blob</a>objects and <a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder">MediaRecorder</a>from the MediaStream Recording API. Note that `video/mp4` may not be supported in all browsers.
+     * @param options.recordAudio If set, microphone sound will be recorded as well. If this parameter is set, options.audioTrack is ignored.
+     * @param options.audioTrack If passed, this audio track is going to be recorded.
+     * @param options.audioBitRate Sets audio bit rate. By default 128000.
+     * @param options.audioSampleRate Set audio sample rate. On firefox it is 48k. On other browsers defaults to audioTrack.getCapabilities().sampleRate.max or to the value passed here.
+     * @param options.videoBitRate Sets video bit rate. By default 4000000.
+     * @param options.videoFrameRate Sets video frame rate. By default 30.
      */
     startVideoRecording(options?: {
-        mimeType?: string;
-    }): void;
+        recordAudio?: boolean;
+        audioTrack?: MediaStreamAudioTrack;
+        audioBitRate?: number;
+        audioSampleRate?: number;
+        videoBitRate?: number;
+        videoFrameRate?: number;
+    }): Promise<void>;
     /**
      * Stops the video recording and returns a video blob.
      * @returns A promise resolving to Blob of a video.
      */
     finishVideoRecording(): Promise<Blob>;
+    /**
+     * Enable background blur.
+     *
+     * Background blur is usually used in video calling use cases.
+     *
+     * @param enable - Boolean indicating whether to enable or disable the background blur effect.
+     * @param strength - Blur strength. Integer number in range 1-10.
+     */
+    backgroundBlur(enable: boolean, strength: number): Promise<void>;
+    /**
+     * Enable background replacement (also known as background removal or green screen effect).
+     *
+     * @param enable - Boolean indicating whether to enable or disable the background replacement effect.
+     * @param image - The URL of the image to be used as the background.
+     * @param mode - Request mode used while fetching the image.
+     */
+    backgroundReplacement(enable: boolean, image: string, mode?: RequestMode): Promise<void>;
     /**
      * Starts the camera preview. By default, the camera will be user facing. The returned promise will resolve after the camera starts
      * or it will reject if camera permission was denied.
@@ -146,10 +197,24 @@ export declare class DeepAR {
      */
     setVideoElement(videoElement: HTMLVideoElement, mirror: boolean): void;
     /**
+     * Change preview element.
+     *
+     * If DeepAR is initialized with previewElement then this method can be used to change the preview element.
+     *
+     * @param newPreviewElement The previewElement to change to.
+     */
+    changePreviewElement(newPreviewElement: HTMLElement): void;
+    /**
      * Shutdown the DeepAR SDK and release all resources associated with it. It is invalid to call any function from this {@link DeepAR} object after shutdown.
      * After shutdown call, it is possible to call {@link initialize} again.
      */
     shutdown(): void;
+    /**
+     * Mutes or un-mutes all the sounds that are currently playing.
+     *
+     * @param muteSound true if you want to mute all the sounds.
+     */
+    muteSound(muteSound: boolean): void;
     /**
      * Feed RGBA image to DeepAR as input instead of camera or video. Used for processing single image. Can be used instead of {@link startCamera} or {@link setVideoElement}.
      * Can be called in a loop.
@@ -170,7 +235,7 @@ export declare class DeepAR {
      */
     setPaused(isPause: boolean): void;
     /**
-     * Changes a node or component bool parameter of the currently loaded effect. For more details about changeParameter API read our docs <a href="https://docs.deepar.ai/guides-and-tutorials/changing-filter-parameters-from-code">here</a>.
+     * Changes a node or component bool parameter of the currently loaded effect. For more details about changeParameter API read our docs <a href="https://docs.deepar.ai/deepar-sdk/tutorials/change-parameter">here</a>.
      * @param gameObject The name of the node from DeepAR Studio. If multiple nodes share the same name, only the first one will be affected.
      * @param component The name of the component. If the name of the component is null or an empty string, the node itself will be affected.
      * @param parameter The name of the parameter.
@@ -178,7 +243,7 @@ export declare class DeepAR {
      */
     changeParameterFloat(gameObject: string, component: string, parameter: string, value: number): void;
     /**
-     * Changes a node or component float parameter of the currently loaded effect. For more details about changeParameter API read our docs <a href="https://docs.deepar.ai/guides-and-tutorials/changing-filter-parameters-from-code">here</a>.
+     * Changes a node or component float parameter of the currently loaded effect. For more details about changeParameter API read our docs <a href="https://docs.deepar.ai/deepar-sdk/tutorials/change-parameter">here</a>.
      * @param gameObject The name of the node from DeepAR Studio. If multiple nodes share the same name, only the first one will be affected.
      * @param component The name of the component. If the name of the component is null or an empty string, the node itself will be affected.
      * @param parameter The name of the parameter.
@@ -186,7 +251,7 @@ export declare class DeepAR {
      */
     changeParameterBool(gameObject: string, component: string, parameter: string, value: boolean): void;
     /**
-     * Changes a node or component vector parameter of the currently loaded effect. For more details about changeParameter API read our docs <a href="https://docs.deepar.ai/guides-and-tutorials/changing-filter-parameters-from-code">here</a>.
+     * Changes a node or component vector parameter of the currently loaded effect. For more details about changeParameter API read our docs <a href="https://docs.deepar.ai/deepar-sdk/tutorials/change-parameter">here</a>.
      * @param gameObject The name of the node from DeepAR Studio. If multiple nodes share the same name, only the first one will be affected.
      * @param component The name of the component. If the name of the component is null or an empty string, the node itself will be affected.
      * @param parameter The name of the parameter.
@@ -197,24 +262,20 @@ export declare class DeepAR {
      */
     changeParameterVector(gameObject: string, component: string, parameter: string, x: number, y: number, z: number, w: number): void;
     /**
-     * Changes a node or component texture parameter of the currently loaded effect. For more details about changeParameter API read our docs <a href="https://docs.deepar.ai/guides-and-tutorials/changing-filter-parameters-from-code">here</a>.
+     * Changes a node or component texture parameter of the currently loaded effect. For more details about changeParameter API read our docs <a href="https://docs.deepar.ai/deepar-sdk/tutorials/change-parameter">here</a>.
      * @param gameObject The name of the node from DeepAR Studio. If multiple nodes share the same name, only the first one will be affected.
      * @param component The name of the component. If the name of the component is null or an empty string, the node itself will be affected.
      * @param parameter The name of the parameter.
      * @param textureUrl Url of the image that is going to be used as texture.
+     * @param mode - Request mode used while fetching the texture.
      */
-    changeParameterTexture(gameObject: string, component: string, parameter: string, textureUrl: string): void;
+    changeParameterTexture(gameObject: string, component: string, parameter: string, textureUrl: string, mode?: RequestMode): Promise<void>;
     /**
      * This method allows the user to fire a custom animation trigger for model animations from code. To fire a custom trigger,
-     * the trigger string must match the custom trigger set in the Studio when creating the effect. Read more <a href="https://help.deepar.ai/en/articles/4354740-animations-tutorial-fbx-model-animations">here</a>.
+     * the trigger string must match the custom trigger set in the Studio when creating the effect. Read more <a href="https://docs.deepar.ai/deepar-studio/studio-explained/animations-and-sounds/3d-animations">here</a>.
      * @param trigger The name of the trigger.
      */
     fireTrigger(trigger: string): void;
-    /**
-     * Informs DeepAR that the specified touch event occurred.
-     * @param touchInfo Touch event information.
-     */
-    touchOccurred(touchInfo: ARTouchInfo): void;
     /**
      * Change face detection sensitivity
      * @param sensitivity 0 .. 5 (0 is fast, 4,5 is slow but allows to find smaller faces)
@@ -232,6 +293,16 @@ export declare class DeepAR {
      * @param enable True - DeepAR will use its internal timer for the rendering loop. Rendering will work even when tab is not focused. False - DeepAR will use requestAnimationFrame() for the rendering loop.
      */
     setOffscreenRenderingEnabled(enable: boolean): void;
+    /**
+     * Retrieves the HTML canvas element used for AR preview.
+     *
+     * The returned canvas is used for DeepAR rendering of camera preview and AR filters.
+     * Most commonly canvas is needed when you want to do some postprocessing on it or feed it
+     * into some video calling library.
+     *
+     * @return {HTMLCanvasElement} The HTML canvas element.
+     */
+    getCanvas(): HTMLCanvasElement;
     /**
      * Set the FPS of DeepAR rendering.
      * @param fps New FPS.
@@ -257,7 +328,7 @@ export declare class DeepAR {
      *
      * Segmentation is usually lazy loaded on demand when filter loaded  with {@link switchEffect} requires it.
      * But this method will start loading the segmentation immediately.
-     * To start initializing foot tracking as soon as possible pass "segmentationInit" hint in the {@link initialize} function (see {@link DeepARParams}). <br><br>
+     * To start initializing segmentation as soon as possible pass "segmentationInit" hint in the {@link initialize} function (see {@link DeepARParams}). <br><br>
      *
      * If the segmentation is already initialized it will do nothing.
      * To check if segmentation is initialized call {@link isSegmentationInitialized} or wait {@link DeepARCallbacks.onSegmentationInitialized} callback.
@@ -267,6 +338,10 @@ export declare class DeepAR {
      * Check weather the segmentation is initialized.
      */
     isSegmentationInitialized(): boolean;
+    /**
+     * Check weather the wrist tracking is initialized.
+     */
+    isWristTrackingInitialized(): boolean;
     /**
      * Display profiling metrics on preview.
      * @param enabled
@@ -284,6 +359,16 @@ export declare class DeepAR {
      * @param targetGameObject New node parent.
      */
     moveGameObject(selectedGameObject: string, targetGameObject: string): void;
+    /**
+     * Informs DeepAR that the specified touch event occurred.
+     *
+     * @deprecated
+     * Since version 5.4.0 DeepAR will automatically register touch events from canvas.
+     * There is no need to call this function anymore.
+     *
+     * @param touchInfo Touch event information.
+     */
+    touchOccurred(touchInfo: ARTouchInfo): void;
     /** INTERNAL API **/
     /**
      * @internal
@@ -311,4 +396,11 @@ export declare class DeepAR {
      * @param enabled
      */
     showColliders(enabled: boolean): void;
+    /**
+     * Sets the preview zoom.
+     *
+     * @param zoomLevel Floating point number determining how much to zoom in. Value <= 1 will disable zoom. Example, value 2.0 puts 2x zoom.
+     */
+    setZoom(zoomLevel: number): void;
+    setFov(useDefaultFov: boolean, fov?: number): void;
 }

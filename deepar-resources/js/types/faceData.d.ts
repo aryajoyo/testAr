@@ -19,11 +19,11 @@ export interface FaceData {
      */
     poseMatrix: number[];
     /**
-     * Array of 63*3 floats containing (x, y, z) positions of the 3D face landmarks. Read more <a href="https://help.deepar.ai/en/articles/4351347-deepar-reference-tracking-models">here</a>.
+     * Array of 63*3 floats containing (x, y, z) positions of the 3D face landmarks. Read more <a href="https://docs.deepar.ai/deepar-studio/getting-started/quickstart-resources">here</a>.
      */
     landmarks: number[];
     /**
-     * Array of 63*2 floats containing (x, y) positions of the 2D face landmarks in screen space. Usually more precise than 3D points but no estimation for z translation. Read more here about feature points. Read more <a href="https://help.deepar.ai/en/articles/4351347-deepar-reference-tracking-models">here</a>.
+     * Array of 63*2 floats containing (x, y) positions of the 2D face landmarks in screen space. Usually more precise than 3D points but no estimation for z translation. Read more here about feature points. Read more <a href="https://docs.deepar.ai/deepar-studio/getting-started/quickstart-resources">here</a>.
      */
     landmarks2d: number[];
     /**

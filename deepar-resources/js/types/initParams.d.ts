@@ -7,9 +7,20 @@ export interface DeepARParams {
      */
     licenseKey: string;
     /**
-     * Canvas element where DeepAR will render the camera and effects/filters.
+     * HTML element where AR preview will be presented.
+     *
+     * This is usually a <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/div">div</a> element which
+     * is used solely for AR preview. AR preview will fully occupy the previewElement's space.
+     * Therefore, position and size your previewElement according to your preferred AR preview dimensions.
+     *
+     * > NOTE: AR preview will adjust to the size of the previewElement if it changes.
+     *
+     * The canvas element will be appended as child to the previewElement. If you wish to work with the canvas element directly
+     * and position and size it yourself then use {@link canvas} parameter instead.
+     *
+     * > ⚠️ You must specify {@link previewElement} or {@link canvas}.
      */
-    canvas: HTMLCanvasElement;
+    previewElement?: HTMLElement;
     /**
      *  The URL of a DeepAR effect file. This effect will be applied when DeepAR is initialized.
      *  This parameter is optional. You can always later switch to a different effect with {@link DeepAR.switchEffect}.
@@ -28,6 +39,30 @@ export interface DeepARParams {
      * To configure usage of non-default ML models, define them in the {@link additionalOptions}.
      */
     rootPath?: string;
+    /**
+     * Canvas element where DeepAR will render the AR preview.
+     *
+     * > ⚠️ You must specify {@link previewElement} or {@link canvas}.
+     *
+     * The preferred way is by using the {@link previewElement} parameter.
+     * In that case, the DeepAR will take care of correctly sizing the canvas.
+     *
+     * @example
+     * ```javascript
+     * const canvas = document.createElement('canvas')
+     * canvas.style.display = 'block'
+     *
+     * // We want to fill the whole screen.
+     * const width = window.innerWidth
+     * const height = window.innerHeight
+     * const dpr = window.devicePixelRatio || 1
+     * canvas.width = width * dpr
+     * canvas.height = height * dpr
+     * canvas.style.width = `${width}px`
+     * canvas.style.height = `${height}px`
+     * ```
+     */
+    canvas?: HTMLCanvasElement;
     /**
      * Additional DeepAR options.
      */
@@ -74,14 +109,58 @@ export interface DeepARParams {
              */
             modelPath: string;
         };
+        rigidFaceTrackingConfig?: {
+            /**
+             * Path to the pose libPoseEstimation.wasm file, e.g. "/path/to/deepar/wasm/libPoseEstimation.wasm".
+             */
+            poseEstimationWasmPath?: string;
+            /**
+             * Path to the detector model, e.g. "/path/to/deepar/models/foot/foot-detector.bin".
+             */
+            detectorPath?: string;
+            /**
+             * Path to the tracker model, e.g. "/path/to/deepar/models/foot/foot-tracker.bin".
+             */
+            trackerPath?: string;
+            /**
+             * Path to the foot model object file, e.g. "/path/to/deepar/models/foot/foot-model.obj".
+             */
+            objPath?: string;
+            /**
+             * Path to tfjs-backend-wasm.wasm file, e.g. "path/to/deepar/wasm/tfjs-backend-wasm.wasm"
+             */
+            tfjsBackendWasmPath?: string;
+            /**
+             * Path to tfjs-backend-wasm-simd.wasm file, e.g. "path/to/deepar/wasm/tfjs-backend-wasm-simd.wasm"
+             */
+            tfjsBackendWasmSimdPath?: string;
+            /**
+             * Path to tfjs-backend-wasm-threaded-simd.wasm file, e.g. "path/to/deepar/wasm/tfjs-backend-wasm-threaded-simd.wasm"
+             */
+            tfjsBackendWasmThreadedSimdPath?: string;
+        };
         /**
          * Segmentation module path and options.
          */
         segmentationConfig?: {
             /**
-             * Path to the segmentation model. Something like "path/to/deepar/models/segmentation/segmentation-192x192.bin".
+             * Path to the base segmentation model. Something like "path/to/deepar/models/segmentation/segmentation-192x192.bin".
+             * Thi is not used by default.
              */
-            modelPath: string;
+            modelPath?: string;
+            /**
+             * MediaPipe segmentation config.
+             */
+            mediaPipeConfig?: {
+                /**
+                 * Base path to wasm fileset. Something like "path/to/deepar/mediaPipe/segmentation/wasm".
+                 */
+                wasmBasePath?: string;
+                /**
+                 * MediaPipe selfie segmenter model to be used. Something like "path/to/deepar/mediaPipe/segmentation/model/selfie_segmenter.tflite".
+                 */
+                modelPath?: string;
+            };
         };
         /**
          * Foot tracking module paths and options.
@@ -117,8 +196,79 @@ export interface DeepARParams {
             tfjsBackendWasmThreadedSimdPath?: string;
         };
         /**
+         * Foot tracking module paths and options.
+         */
+        wristTrackingConfig?: {
+            /**
+             * Path to the pose libPoseEstimation.wasm file, e.g. "/path/to/deepar/wasm/libPoseEstimation.wasm".
+             */
+            poseEstimationWasmPath?: string;
+            /**
+             * Path to the detector model, e.g. "/path/to/deepar/models/wrist/wrist-det-9.bin".
+             */
+            detectorPath?: string;
+            /**
+             * Path to the tracker model, e.g. "/path/to/deepar/models/wrist/wrist-track-181-q.bin".
+             */
+            trackerPath?: string;
+            /**
+             * Path to the foot model object file, e.g. "/path/to/deepar/models/wrist/wrist-track.obj".
+             */
+            objPath?: string;
+            /**
+             * Path to tfjs-backend-wasm.wasm file, e.g. "path/to/deepar/wasm/tfjs-backend-wasm.wasm"
+             */
+            tfjsBackendWasmPath?: string;
+            /**
+             * Path to tfjs-backend-wasm-simd.wasm file, e.g. "path/to/deepar/wasm/tfjs-backend-wasm-simd.wasm"
+             */
+            tfjsBackendWasmSimdPath?: string;
+            /**
+             * Path to tfjs-backend-wasm-threaded-simd.wasm file, e.g. "path/to/deepar/wasm/tfjs-backend-wasm-threaded-simd.wasm"
+             */
+            tfjsBackendWasmThreadedSimdPath?: string;
+        };
+        /**
          * Path to deepar.wasm file. Something like "/path/to/deepar/wasm/deepar.wasm".
          */
         deeparWasmPath?: string;
+        /**
+         * Path to dyXzimgMagicFace.wasm file. Something like "/path/to/deepar/wasm/dyXzimgMagicFace.wasm".
+         */
+        dyXzimgMagicFaceWasmPath?: string;
+        /**
+         * Path to dyArcoreScripting.wasm file. Something like "/path/to/deepar/wasm/dyArcoreScripting.wasm".
+         */
+        dyArcoreScriptingWasmPath?: string;
+        /**
+         * Path to dyArcorePhysics.wasm file. Something like "/path/to/deepar/wasm/dyArcorePhysics.wasm".
+         */
+        dyArcorePhysicsWasmPath?: string;
+        /**
+         * Dynamic JS modules paths.
+         */
+        dynamicModulesConfig?: {
+            /**
+             * Path to xzimg.js file. Something like "/path/to/deepar/js/dynamicModules/xzimg.js".
+             */
+            xzimgPath?: string;
+            /**
+             * Path to mediaPipe.js file. Something like "/path/to/deepar/js/dynamicModules/mediaPipe.js".
+             */
+            mediaPipePath?: string;
+        };
+        /**
+         * Embedded DeepAR effect files paths.
+         */
+        embeddedEffectsConfig?: {
+            /**
+             * Path to background_blur.deepar file. Something like "/path/to/deepar/effects/background_blur.deepar".
+             */
+            backgroundBlurPath?: string;
+            /**
+             * Path to background_replacement.deepar file. Something like "/path/to/deepar/effects/background_replacement.deepar".
+             */
+            backgroundReplacementPath?: string;
+        };
     };
 }

@@ -1,5 +1,6 @@
 import { FaceData } from "./faceData";
 import { FootData } from "./footData";
+import { WristData } from "./wristData";
 /**
  * Callbacks from DeepAR notifying events.
  * Register callbacks with {@link DeepAR.callbacks}.
@@ -25,6 +26,12 @@ export interface DeepARCallbacks {
      */
     onFeetTracked?: (leftFootData: FootData, rightFootData: FootData) => void;
     /**
+     * Passes the information about the detected wrist. If this callback is set, it will get called every frame.
+     * NOTE: This callback is only called when the SDK does wrist tracking. For example, you laded some effect that uses wrist tracking (watch-try-on effects). But if no effect is loaded this callback will not get called because the SDK is not performing wrist tracking.
+     * @param wristData Information about the wrist.
+     */
+    onWristTracked?: (wristData: WristData) => void;
+    /**
      * Called when foot tracking is fully initialized.
      * Be sure to check {@link DeepAR.isFootTrackingInitialized} before setting this callback.
      * Because this callback is called only once. So if you set this callback after the foot tracking is initialized, it will not be called again.
@@ -37,6 +44,12 @@ export interface DeepARCallbacks {
      */
     onSegmentationInitialized?: () => void;
     /**
+     * Called when wrist tracking is fully initialized.
+     * Be sure to check {@link DeepAR.isWristTrackingInitialized} before setting this callback.
+     * Because this callback is called only once. So if you set this callback after the wrist tracking is initialized, it will not be called again.
+     */
+    onWristTrackingInitialized?: () => void;
+    /**
      * Called when the animation player transitions to a new state.
      * @param newState Name of the new state that is being transitioned to.
      */
@@ -47,4 +60,5 @@ export interface DeepARCallbacks {
      * @internal
      */
     __deeparRendered?: (canvas: HTMLCanvasElement) => void;
+    __deeparRendered2?: (canvas: HTMLCanvasElement) => void;
 }
